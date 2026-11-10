@@ -5,7 +5,7 @@ package.domain = br.com.independenttv
 source.dir = .
 source.include_exts = py,kv,png,jpg,atlas,json,txt
 version = 0.1.0
-requirements = python3,kivy==2.3.1,requests
+requirements = python3,kivy==2.3.1,requests,charset-normalizer==2.1.1
 orientation = landscape
 fullscreen = 1
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,WAKE_LOCK
