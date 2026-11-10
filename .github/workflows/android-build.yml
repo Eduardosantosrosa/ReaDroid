@@ -1,0 +1,60 @@
+name: Android Build
+
+on:
+  push:
+    paths:
+      - 'reconstrucao_extreme_infinitv_1_9_0/**'
+      - '.github/workflows/android-build.yml'
+  pull_request:
+    paths:
+      - 'reconstrucao_extreme_infinitv_1_9_0/**'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-build:
+    name: Test and Build APK
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: reconstrucao_extreme_infinitv_1_9_0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run JUnit tests
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
+
+      - name: Build Debug APK
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: readroid-extreme-debug
+          path: reconstrucao_extreme_infinitv_1_9_0/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
