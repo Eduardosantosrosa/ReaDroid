@@ -62,7 +62,7 @@ public final class MainActivity extends Activity {
         search.setOnEditorActionListener((v,a,e)->{renderRows();return false;});render();
     }
     private TextView text(String s,int size,boolean bold){TextView v=new TextView(this);v.setText(s);v.setTextColor(fg);v.setTextSize(size);if(bold)v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return v;}
-    private Button button(String s){Button b=new Button(this);b.setText(s);b.setTextColor(fg);b.setAllCaps(false);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(panel));b.setFocusable(true);b.setPadding(dp(12),0,dp(12),0);b.setMinimumWidth(dp(72));return b;}
+    private Button button(String s){Button b=new Button(this);b.setText(s);b.setTextColor(fg);b.setAllCaps(false);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(panel));b.setFocusable(true);b.setOnFocusChangeListener((v,focused)->b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(focused?accent:panel)));b.setPadding(dp(12),0,dp(12),0);b.setMinimumWidth(dp(72));return b;}
     private void loadSavedSource(){String type=store.get("type");if(type.isEmpty())return;if(type.equals("m3u")){loadM3u(store.get("url"),false);}else loadXtream(false);}
     private void addSource(){editSource(null);}
     private void manageSources(){
@@ -123,7 +123,7 @@ public final class MainActivity extends Activity {
                 if(!category.equals("Todas")&&!category.equals(item.category))continue;
             }
             if(!query.isEmpty()&&!item.name.toLowerCase().contains(query))continue;
-            shown.add(item);LinearLayout row=new LinearLayout(this);row.setTag("stream-row");row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(10),dp(8),dp(6),dp(8));row.setBackgroundColor(panel);row.setFocusable(true);row.setFocusableInTouchMode(true);
+            shown.add(item);LinearLayout row=new LinearLayout(this);row.setTag("stream-row");row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(10),dp(8),dp(6),dp(8));row.setBackgroundColor(panel);row.setFocusable(true);row.setFocusableInTouchMode(true);row.setOnFocusChangeListener((v,focused)->row.setBackgroundColor(focused?Color.rgb(34,68,56):panel));
             LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(70));rp.setMargins(0,dp(4),0,dp(4));body.addView(row,rp);
             TextView title=text(item.name,16,true);row.addView(title,new LinearLayout.LayoutParams(0,-2,1));
             if(section.equals("Editar M3U")){Button edit=button("Editar");edit.setOnClickListener(v->editM3uItem(item));row.addView(edit);Button remove=button("Excluir");remove.setOnClickListener(v->{entries.remove(item);renderRows();});row.addView(remove);continue;}
