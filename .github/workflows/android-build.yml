@@ -60,3 +60,30 @@ jobs:
           path: reconstrucao_extreme_infinitv_1_9_0/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Build signed Release APK when signing secrets are configured
+        id: release
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo 'Signing secrets not configured; skipping Release APK.'
+            echo 'signed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_FILE"
+          ./gradlew --no-daemon :app:assembleRelease
+          echo 'signed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed Release APK
+        if: steps.release.outputs.signed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: readroid-extreme-release-signed
+          path: reconstrucao_extreme_infinitv_1_9_0/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

@@ -9,8 +9,8 @@ Classificação pela implementação encontrada, sem inferir comportamento a par
 | Importação M3U/M3U8 | PARCIAL | Download por URL e parser EXTINF/EXTGRP; sem seletor de arquivo, serialização, URL relativa e cabeçalhos. |
 | Categorias de TV ao vivo | PARCIAL | Busca categorias Xtream e filtro M3U local; UX/falhas sem validação. |
 | Catálogo de filmes | PARCIAL | Lista Xtream/M3U; detalhe não implementado. |
-| Séries, temporadas e episódios | PARCIAL | Busca catálogo de séries; botão informa que detalhes não estão disponíveis. |
-| Detalhes de filmes e séries | AUSENTE | Não há fluxo de detalhe/temporada. |
+| Séries, temporadas e episódios Xtream | PARCIAL | `XtreamClient.episodes` consulta `get_series_info`, resolve IDs/extensões de episódios e `MainActivity` mostra lista agrupada por temporada e abre Media3. Não executado contra servidor. |
+| Detalhes completos de filmes e séries | PARCIAL | Série oferece seleção de episódio; sem tela de metadados/temporadas completa nem detalhe de filme. |
 | EPG e programação atual/próxima | AUSENTE | Sem parser XMLTV nem consulta/exibição. |
 | Favoritos | PARCIAL | Grava JSON em SharedPreferences; não segmentado por fonte nem testado. |
 | Biblioteca e histórico | AUSENTE | Sem histórico/progresso/watchlist. |

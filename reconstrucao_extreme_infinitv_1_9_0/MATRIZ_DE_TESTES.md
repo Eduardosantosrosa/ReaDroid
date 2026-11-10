@@ -4,10 +4,14 @@
 
 | Caso | Estado | Resultado |
 |---|---|---|
-| Gradle `testDebugUnitTest` offline | NÃO EXECUTADO | Duas tentativas ficaram sem progresso observável durante a inicialização do daemon; a segunda encerrou pelo limite de 30 s (timeout). Nenhum resultado de teste. |
-| JUnit M3U (4 casos existentes) | NÃO EXECUTADO | AGP requerido não disponível no cache; SDK Android não localizado. |
+| Gradle `:app:testDebugUnitTest` offline | FALHOU NA CONFIGURAÇÃO | Wrapper 8.7 iniciou, mas AGP 8.6.1 não estava no cache offline. |
+| Gradle `:app:testDebugUnitTest` com resolução normal | FALHOU NA CONFIGURAÇÃO | AGP foi resolvido; build parou com `SDK location not found`, antes de compilar ou rodar JUnit. |
+| Gradle `help` offline | APROVADO | Wrapper e configuração Gradle/AGP do projeto carregaram; tarefa não compila código Android. |
+| JUnit M3U (4 casos existentes) | NÃO EXECUTADO | Nenhum caso executado porque falta Android SDK Platform. |
 | APK debug / inspeção | NÃO EXECUTADO | Nenhum APK deste projeto foi criado. |
 | APK original e app original | NÃO EXECUTADO | Foi feita análise estática da árvore de fonte e dos relatórios de inspeção; o APK não foi instalado nem executado. |
+| XML do manifesto e banner TV | APROVADO (ESTÁTICO) | Os dois arquivos foram analisados por `xml.etree.ElementTree`; isso não equivale ao AAPT/build Android. |
+| `git diff --check` | APROVADO | Sem erros de whitespace no diff atual. |
 
 ## Testes existentes
 
@@ -21,7 +25,8 @@
 | Serialização M3U round-trip | NÃO CRIADO |
 | Xtream API e auth com servidor simulado | NÃO CRIADO |
 | Categorias e filtro | NÃO CRIADO |
-| Detalhes de filme/série/temporada/episódio | NÃO CRIADO (fluxo ausente) |
+| Xtream get_series_info e seleção de episódio | FLUXO IMPLEMENTADO; teste automatizado e teste contra servidor simulado NÃO CRIADOS |
+| Detalhes de filme e metadados completos de série | NÃO IMPLEMENTADO |
 | XMLTV/EPG, fuso e now/next | NÃO CRIADO (função ausente) |
 | Favoritos por fonte e persistência/reinício | NÃO CRIADO |
 | Múltiplas fontes/migração | NÃO CRIADO (função ausente) |

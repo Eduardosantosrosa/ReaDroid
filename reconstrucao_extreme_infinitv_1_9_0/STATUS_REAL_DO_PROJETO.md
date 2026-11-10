@@ -2,15 +2,17 @@
 
 ## Resumo
 
-A reconstrução Java/Android independente existe e contém fluxos básicos de conexão Xtream, importação remota M3U, lista/filtro/pesquisa e favoritos locais, além de abertura de URL em Media3. Não há evidência de APK gerado para este projeto. Esta auditoria é estática; não houve execução em dispositivo; os arquivos externos de referência foram examinados estaticamente, sem alterar os originais. O relatório inicial antes das mudanças está em `INVENTARIO_ESTADO_INICIAL.md`; a leitura complementar da referência está em `AUDITORIA_REFERENCIA.md`.
+A reconstrução Java/Android independente implementa conexão Xtream e M3U remota, catálogo básico, pesquisa/filtro, favoritos locais e player Media3. Nesta etapa, séries Xtream consultam `get_series_info`, listam episódios por temporada e permitem iniciar sua reprodução. Não há APK gerado. A referência foi examinada estaticamente; o APK original não foi executado. Consulte `INVENTARIO_ESTADO_INICIAL.md` e `AUDITORIA_REFERENCIA.md`.
 
 ## Build e ambiente
 
 - Java/Javac: OpenJDK 21.0.13 no PATH; Gradle instalado (versão 9.9 na mensagem do daemon).
 - Node está no PATH; pnpm, rustc, cargo, adb e sdkmanager ausentes.
 - `ANDROID_HOME`/`ANDROID_SDK_ROOT` vazios; nenhuma instalação de `android.jar` encontrada.
-- Projeto requer AGP 8.6.1, Gradle compatível, SDK 35 e dependências AndroidX/Media3. Não existe Gradle wrapper. O cache tem AGP 8.7.3, mas não o 8.6.1 pedido pelo build; não alterei a versão nem baixei toolchains.
-- `gradle --offline --no-daemon --console=plain testDebugUnitTest` foi tentado duas vezes; o daemon ficou sem progresso observável, e a segunda tentativa encerrou em 30 s; não alcançou resultado de tarefa. Portanto JUnit continua não executado e build não validado.
+- O projeto contém Gradle Wrapper 8.7 e usa AGP 8.6.1, SDK 35 e Java 17.
+- `./gradlew --offline --no-daemon --console=plain :app:testDebugUnitTest` falhou antes de configurar tarefas porque AGP 8.6.1 não está no cache offline.
+- A tentativa com resolução normal conseguiu configurar o plugin, mas falhou com `SDK location not found`. Não houve compilação Java nem execução JUnit.
+- `./gradlew --offline --no-daemon --console=plain help` APROVADO; valida apenas o wrapper/configuração Gradle, não compila o app.
 - Nenhum APK foi gerado. Não há caminho de APK deste projeto a reportar.
 
 ## Implementado com evidência no código
@@ -21,13 +23,15 @@ A reconstrução Java/Android independente existe e contém fluxos básicos de c
 - Pesquisa local pelo nome nas entradas carregadas.
 - Favoritos serializados em SharedPreferences.
 - Player Media3 com módulos HLS/DASH e URL direta; reprodução não foi testada.
+- Série Xtream: request `get_series_info`, resolução dos IDs/extensões retornados e seleção do episódio para abrir Media3; não testado contra servidor.
+- Workflow GitHub Actions gera Debug e, com secrets de assinatura, Release assinado.
 
 ## Ajustes desta continuação
 
-- `XtreamClient` não fabrica URL de filme para um `series_id`; deixa a URL vazia até haver resolução real de episódios.
+- `XtreamClient` resolve episódio via `get_series_info` sem usar `series_id` como ID de mídia.
 - Ao remover favorito enquanto a lista Favoritos está aberta, a linha é removida da exibição imediatamente.
 - `git diff --check` não apontou whitespace problemático nos arquivos rastreados consultados; arquivos do projeto são em grande parte não rastreados no estado Git apresentado.
 
 ## Não comprovado
 
-Compatibilidade Android 10, instalação/execução, APIs reais de provedores, codecs/containers, headers autenticados, segurança em repouso, Android TV/D-pad e acessibilidade. Ver matrizes para classificação detalhada.
+EPG/XMLTV, detalhes completos de filmes/séries, múltiplas fontes, credenciais cifradas, histórico/watchlist, downloads, editor/exportação M3U, backup/restauração e testes de integração ainda não estão implementados. Android 10, TV Box, D-pad/foco, acessibilidade, APIs reais e codecs não foram testados. A senha persiste em SharedPreferences sem cifra adicional. Quando o ambiente estiver pronto, os caminhos esperados são `app/build/outputs/apk/debug/app-debug.apk` e, com chave configurada, `app/build/outputs/apk/release/app-release.apk`.

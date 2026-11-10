@@ -7,9 +7,12 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.Iterator;
 
 /** Direct client: requests are sent only to the user-entered provider host. */
 public final class XtreamClient {
@@ -42,6 +45,37 @@ public final class XtreamClient {
             // A series_id is not a playable stream_id; episode resolution requires get_series_info.
             String url=kind.equals("series")?"":host+path+enc(user)+"/"+enc(password)+"/"+id+"."+ext;
             out.add(new StreamItem(id,o.optString("name","Stream"),url,category.equals("Todas")?o.optString("category_name",category):category,kind,o.optString("stream_icon",o.optString("cover",""))));
+        }
+        return out;
+    }
+
+    /** Resolves a series ID into playable episode IDs using the Xtream series-info action. */
+    public List<StreamItem> episodes(String seriesId,String seriesName)throws Exception {
+        JSONObject root=new JSONObject(request("action=get_series_info&series_id="+enc(seriesId)));
+        JSONObject seasons=root.optJSONObject("episodes");
+        List<StreamItem> out=new ArrayList<>();
+        if(seasons==null)return out;
+        List<String> seasonIds=new ArrayList<>();
+        Iterator<String> keys=seasons.keys();
+        while(keys.hasNext())seasonIds.add(keys.next());
+        Collections.sort(seasonIds,Comparator.comparingInt((String key)->{
+            try{return Integer.parseInt(key);}catch(NumberFormatException ignored){return Integer.MAX_VALUE;}
+        }));
+        for(String season:seasonIds) {
+            JSONArray rows=seasons.optJSONArray(season);
+            if(rows==null)continue;
+            for(int i=0;i<rows.length();i++) {
+                JSONObject episode=rows.optJSONObject(i);
+                if(episode==null)continue;
+                String id=episode.optString("id");
+                if(id.isEmpty())continue;
+                String title=episode.optString("title",seriesName+" — S"+season+"E"+(i+1));
+                String ext=episode.optString("container_extension","mp4");
+                String image=episode.optJSONObject("info")!=null
+                        ?episode.optJSONObject("info").optString("movie_image",""):"";
+                String stream=host+"/series/"+enc(user)+"/"+enc(password)+"/"+enc(id)+"."+enc(ext);
+                out.add(new StreamItem(id,title,stream,"Temporada "+season,"episode",image));
+            }
         }
         return out;
     }

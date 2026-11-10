@@ -12,7 +12,9 @@ Fluxo de build: Astro/Vite compila `frontendDist` (`dist`); `tauri android build
 
 ## Reconstrução
 
-Camadas: `MainActivity` apresenta catálogo/importação; `M3uParser` analisa EXTINF e URL; `XtreamClient` consulta API do host configurado; `LocalStore` guarda fonte/favoritos em SharedPreferences; `VideoActivity` delega decodificação a Media3. Rede acontece numa fila de trabalho e UI volta à thread principal. A API de playback recebe uma URL, sem relay intermediário.
+**Tecnologia escolhida: Java nativo para Android.** O alvo é Android/Android TV, e a implementação precisa de Media3, intents, ciclo de vida, armazenamento Android e foco/D-pad sem camada de runtime adicional. Kotlin também seria apropriado, mas a reconstrução existente e o código auditado estão em Java; manter essa base reduz migração e facilita Gradle/Android Studio. Python serve para ferramentas de auditoria e testes auxiliares, mas exigiria um runtime ou bridge e não oferece vantagem no player/TV.
+
+Camadas: `MainActivity` apresenta catálogo/importação; `M3uParser` analisa EXTINF e URL; `XtreamClient` consulta API do host configurado e resolve episódios via `get_series_info`; `LocalStore` guarda fonte/favoritos em SharedPreferences; `VideoActivity` delega decodificação a Media3. Rede acontece numa fila de trabalho e UI volta à thread principal. A API de playback recebe uma URL, sem relay intermediário.
 
 ## Limites atuais
 
