@@ -30,3 +30,9 @@ Verificações do ambiente Termux: Java/Javac 21 e Gradle estão no PATH. Não l
 O inventário pré-alteração está em `INVENTARIO_ESTADO_INICIAL.md`; status e matrizes atualizadas estão em `STATUS_REAL_DO_PROJETO.md`, `MATRIZ_DE_FUNCIONALIDADES.md` e `MATRIZ_DE_TESTES.md`. A tentativa Gradle offline para `testDebugUnitTest` não terminou com resultado e foi interrompida durante a inicialização do daemon. Não houve APK. A falta do SDK e do plugin 8.6.1 no cache impede build confiável neste Termux; ver `INSTRUCOES_DE_COMPILACAO.md` para ambiente Windows/Android Studio.
 
 A implementação observada tem apenas uma fonte, sem Xtream de detalhes/EPG, sem série jogável, sem Keystore e sem fluxos de biblioteca/downloads/backup. Os quatro casos JUnit existentes são escritos, não executados. A matriz nova classifica esses limites sem converter superfícies de interface em funcionalidade concluída.
+
+## Situação após a implementação Android — 2026-11-10
+
+Os parágrafos acima registram o estado inicial e foram superados pelas alterações descritas nas matrizes e no `STATUS_REAL_DO_PROJETO.md`. O ambiente local possui SDK API 35 e gerou Debug; 7 JUnit passaram e testes instrumentados compilam. Não confundir compilação instrumentada com execução: falta emulador local; Actions precisa confirmar execução para a versão atual.
+
+Pendências reais: validar navegação/toque/D-pad em celulares e TV Box físicos; validar playback, formatos, headers, PiP e seleção de faixas contra streams e codecs reais; teste com provedor Xtream real; suportar XMLTV e busca realmente federada; downloads de streams HLS/DASH segmentadas (fila atual cobre arquivos HTTP diretos); validar retomada/estado do serviço após reinício do Android. O app permite cleartext por compatibilidade com listas/hosts legados, portanto deve ser usado com fontes confiáveis. Não há segredo de assinatura configurado, então não alegar APK Release assinado.

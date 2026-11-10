@@ -13,6 +13,10 @@ import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 
 /** Direct client: requests are sent only to the user-entered provider host. */
 public final class XtreamClient {
@@ -23,9 +27,9 @@ public final class XtreamClient {
     private String enc(String s)throws Exception{return URLEncoder.encode(s, StandardCharsets.UTF_8.name());}
     private String request(String query)throws Exception {
         URL u=new URL(host+"/player_api.php?username="+enc(user)+"&password="+enc(password)+(query.isEmpty()?"":"&"+query));
-        HttpURLConnection c=(HttpURLConnection)u.openConnection(); c.setConnectTimeout(12000); c.setReadTimeout(20000); c.setRequestProperty("Accept","application/json");
-        try(InputStream in=c.getInputStream();ByteArrayOutputStream b=new ByteArrayOutputStream()) { byte[] chunk=new byte[8192]; int n; while((n=in.read(chunk))!=-1)b.write(chunk,0,n); return new String(b.toByteArray(),StandardCharsets.UTF_8); }
-        finally { c.disconnect(); }
+        HttpURLConnection c=null;try{c=(HttpURLConnection)u.openConnection();c.setConnectTimeout(12000);c.setReadTimeout(20000);c.setRequestProperty("Accept","application/json");int status=c.getResponseCode();if(status<200||status>=300)throw new java.io.IOException("HTTP "+status);try(InputStream in=c.getInputStream();ByteArrayOutputStream b=new ByteArrayOutputStream()){byte[] chunk=new byte[8192];int n,total=0;while((n=in.read(chunk))!=-1){total+=n;if(total>16*1024*1024)throw new java.io.IOException("response too large");b.write(chunk,0,n);}return new String(b.toByteArray(),StandardCharsets.UTF_8);}}
+        catch(Exception e){if(e instanceof java.io.IOException&&e.getMessage()!=null&&e.getMessage().startsWith("HTTP "))throw e;throw new java.io.IOException("Falha de rede ou resposta inválida do provedor Xtream.");}
+        finally{if(c!=null)c.disconnect();}
     }
     private JSONArray array(String action)throws Exception { return new JSONArray(request("action="+action)); }
     public void validate()throws Exception { JSONObject root=new JSONObject(request("")); JSONObject info=root.optJSONObject("user_info"); if(info==null||!info.optString("auth","0").equals("1")) throw new Exception("Credenciais rejeitadas pelo provedor."); }
@@ -78,5 +82,28 @@ public final class XtreamClient {
             }
         }
         return out;
+    }
+
+    public List<ProgramEntry> shortEpg(String streamId,int limit)throws Exception {
+        JSONObject root=new JSONObject(request("action=get_short_epg&stream_id="+enc(streamId)+"&limit="+Math.max(1,Math.min(limit,10))));
+        JSONArray rows=root.optJSONArray("epg_listings");List<ProgramEntry> out=new ArrayList<>();if(rows==null)return out;
+        for(int i=0;i<rows.length();i++){
+            JSONObject row=rows.optJSONObject(i);if(row==null)continue;
+            out.add(new ProgramEntry(decodeText(row.optString("title")),decodeText(row.optString("description")),
+                    formatTimestamp(row.optString("start_timestamp",row.optString("start"))),
+                    formatTimestamp(row.optString("stop_timestamp",row.optString("end")))));
+        }
+        return out;
+    }
+    public JSONObject vodInfo(String streamId)throws Exception {
+        return new JSONObject(request("action=get_vod_info&vod_id="+enc(streamId)));
+    }
+    private String decodeText(String value){
+        if(value==null||value.isEmpty())return "";
+        try{return new String(Base64.getMimeDecoder().decode(value),StandardCharsets.UTF_8);}catch(IllegalArgumentException ignored){return value;}
+    }
+    private String formatTimestamp(String value){
+        try{long number=Long.parseLong(value);if(number<100000000000L)number*=1000L;return DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(number));}
+        catch(Exception ignored){return value;}
     }
 }

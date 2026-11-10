@@ -2,11 +2,18 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.dpad" android:required="false" />
     <application android:theme="@style/AppTheme" android:label="ReaDroid Stream" android:banner="@drawable/tv_banner" android:usesCleartextTraffic="true">
-        <activity android:name=".ui.VideoActivity" android:screenOrientation="sensorLandscape" android:exported="false" />
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.files" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/share_paths" />
+        </provider>
+        <service android:name=".data.MediaDownloadService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <activity android:name=".ui.VideoActivity" android:screenOrientation="sensorLandscape" android:supportsPictureInPicture="true" android:resizeableActivity="true" android:exported="false" />
         <activity android:name=".ui.MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter>
         </activity>

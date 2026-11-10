@@ -4,22 +4,20 @@ Classificação pela implementação encontrada, sem inferir comportamento a par
 
 | Área | Estado | Evidência/limite |
 |---|---|---|
-| Login e gerenciamento de fontes | PARCIAL | Formulário Xtream/M3U; uma única fonte, sem CRUD/seleção múltipla. |
-| Múltiplas conexões Xtream | AUSENTE | `LocalStore` guarda apenas uma fonte. |
-| Importação M3U/M3U8 | PARCIAL | Download por URL e parser EXTINF/EXTGRP; sem seletor de arquivo, serialização, URL relativa e cabeçalhos. |
-| Categorias de TV ao vivo | PARCIAL | Busca categorias Xtream e filtro M3U local; UX/falhas sem validação. |
-| Catálogo de filmes | PARCIAL | Lista Xtream/M3U; detalhe não implementado. |
-| Séries, temporadas e episódios Xtream | PARCIAL | `XtreamClient.episodes` consulta `get_series_info`, resolve IDs/extensões de episódios e `MainActivity` mostra lista agrupada por temporada e abre Media3. Não executado contra servidor. |
-| Detalhes completos de filmes e séries | PARCIAL | Série oferece seleção de episódio; sem tela de metadados/temporadas completa nem detalhe de filme. |
-| EPG e programação atual/próxima | AUSENTE | Sem parser XMLTV nem consulta/exibição. |
-| Favoritos | PARCIAL | Grava JSON em SharedPreferences; não segmentado por fonte nem testado. |
-| Biblioteca e histórico | AUSENTE | Sem histórico/progresso/watchlist. |
-| Busca global | PARCIAL | Filtro local por nome apenas nos dados carregados. |
-| Player e seleção de mídia | PARCIAL | Media3 fullscreen; sem seleção de faixa/headers; playback NÃO TESTADO. |
-| Downloads | AUSENTE | Sem fila/armazenamento offline. |
-| Edição e gerenciamento de playlists | AUSENTE | Não há editor/exportador nem gestão de fontes. |
-| Backup e restauração | AUSENTE | Sem fluxo ou formato de backup. |
-| Preferências e persistência | PARCIAL | Preferência privada simples; fonte única e favoritos, senha sem cifra adicional; sem migração. |
-| Tratamento de erros de rede | PARCIAL | Exceções viram Toast; códigos HTTP, retry, cancelamento e erros específicos ausentes. |
-| Proteção de credenciais | PARCIAL | Não há credencial embutida no código; senha gravada em SharedPreferences sem Keystore e pode compor URL de mídia. |
-| Android TV/D-pad | PARCIAL | Launcher Leanback e controles focáveis; fluxo integral/foco e layouts grandes não verificados. |
+| Login e gerenciamento de fontes | IMPLEMENTADO NO CÓDIGO | CRUD e seleção Xtream/M3U; sem teste manual contra provedor real. |
+| Múltiplas conexões Xtream/M3U | IMPLEMENTADO NO CÓDIGO | Fonte ativa e migração do formato antigo; teste instrumentado escrito. |
+| Importação M3U/M3U8 | PARCIAL | URL HTTP/HTTPS e SAF local; parser de entradas e cabeçalhos conhecidos. URLs relativas e playlist master não suportadas. |
+| Categorias | IMPLEMENTADO NO CÓDIGO | Categorias Xtream e grupo M3U, filtrados localmente; UX/dispositivo não validado. |
+| Catálogo e detalhes de filmes | PARCIAL | Lista e detalhe Xtream por `get_vod_info`; M3U tem metadados limitados. |
+| Séries, temporadas e episódios Xtream | IMPLEMENTADO NO CÓDIGO | `get_series_info`, temporadas ordenadas e URI de episódios; teste instrumentado mockado compilado, execução pendente no emulador. |
+| EPG | PARCIAL | Consulta Xtream `get_short_epg` e exibição; sem XMLTV e sem teste executado contra provedor. |
+| Favoritos, Assistir depois e histórico | IMPLEMENTADO NO CÓDIGO | Persistência cifrada com identificação por fonte; testes instrumentados escritos. |
+| Busca global | PARCIAL | Pesquisa de nomes no catálogo atualmente carregado; não agrega fontes em segundo plano. |
+| Player e seleção de mídia | PARCIAL | Media3 com HLS/DASH, headers, seleção de faixas e PiP; reprodução em dispositivo não testada. DRM/codec dependem do aparelho/provedor. |
+| Downloads | PARCIAL | Fila HTTP resumível para arquivos diretos reconhecidos e playback offline; não empacota HLS/DASH segmentado. Serviço ainda precisa teste em Android real. |
+| Edição e exportação M3U | PARCIAL | Edita nome/grupo e compartilha exportação das entradas carregadas; não é editor avançado nem preserva todas extensões. |
+| Backup e restauração | IMPLEMENTADO NO CÓDIGO | Formato próprio cifrado com frase secreta e limite de tamanho; teste instrumentado escrito, não executado. |
+| Preferências e persistência | PARCIAL | Autoplay/PiP, conteúdo local e migração antiga; sem sincronização entre dispositivos. |
+| Tratamento de rede | PARCIAL | Timeouts/limites HTTP e erros sanitizados no Xtream; sem política de retry global. |
+| Proteção de credenciais | IMPLEMENTADO NO CÓDIGO | AES-GCM Android Keystore para dados locais; backup exportado recebe cifra PBKDF2/AES-GCM. |
+| Android TV/D-pad | PARCIAL | Leanback launcher e widgets focáveis; não validado com controle/televisão física. |

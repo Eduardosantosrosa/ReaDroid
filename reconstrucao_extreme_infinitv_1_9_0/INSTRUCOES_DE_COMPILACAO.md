@@ -27,6 +27,12 @@ No GitHub Actions, configure os secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYS
 
 ## Termux
 
-O projeto usa Android Gradle Plugin e requer JDK 17, Android SDK Platform 35, Build Tools 35 e acesso aos repositórios Google Maven/Maven Central. Configure `JAVA_HOME`, `ANDROID_HOME` e `ANDROID_SDK_ROOT` para instalações compatíveis e use os mesmos comandos `./gradlew` acima. A viabilidade depende da disponibilidade de `sdkmanager`, dos pacotes Android para a arquitetura do Termux e das dependências nativas no dispositivo. Neste Termux, JDK 21 e Gradle existem, mas SDK/`sdkmanager` não; o build local parou por SDK ausente. O caminho automatizado já configurado é GitHub Actions.
+Neste ambiente o SDK está em `$HOME/android-sdk`, com API 35/Build Tools 35.0.0; configure `ANDROID_HOME` e `ANDROID_SDK_ROOT` para esse caminho. Use JDK 17 para Gradle (há override do AAPT2 experimental fornecido pelo ambiente Termux). Exemplo:
+
+```sh
+ANDROID_HOME="$HOME/android-sdk" ANDROID_SDK_ROOT="$HOME/android-sdk" ./gradlew --offline --no-daemon --console=plain :app:testDebugUnitTest :app:assembleDebug
+```
+
+Essa sequência foi executada com sucesso aqui. Não há binário Android Emulator instalado, portanto não execute `connectedDebugAndroidTest` localmente; o workflow usa um emulador hospedado.
 
 Esta reconstrução Java não deve ser confundida com o projeto Tauri original, que adicionalmente exige Node/pnpm, Rust/Cargo e integração Tauri Android. Não há afirmação de compilação do projeto original.

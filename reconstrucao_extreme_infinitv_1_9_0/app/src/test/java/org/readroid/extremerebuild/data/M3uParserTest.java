@@ -18,4 +18,23 @@ public class M3uParserTest {
         assertEquals(1,rows.size()); assertEquals("Good",rows.get(0).name);
     }
     @Test public void emptyInputReturnsNoEntries() { assertTrue(M3uParser.parse("").isEmpty()); }
+
+    @Test public void serializerRoundTripsNameGroupLogoAndUrl() {
+        StreamItem original=new StreamItem("x","News, World","https://example.test/live.m3u8","Local, \"News\" & More","hls","https://img.example/logo.png");
+        String output=M3uSerializer.serialize(java.util.Collections.singletonList(original));
+        List<StreamItem> parsed=M3uParser.parse(output);
+        assertEquals(1,parsed.size());assertEquals(original.name,parsed.get(0).name);
+        assertEquals(original.category,parsed.get(0).category);assertEquals(original.logo,parsed.get(0).logo);assertEquals(original.url,parsed.get(0).url);
+    }
+    @Test public void serializerSkipsNonHttpAndRemovesEmbeddedNewlines() {
+        String output=M3uSerializer.serialize(java.util.Collections.singletonList(new StreamItem("x","A\nChannel","file:///private","","live","")));
+        assertEquals("#EXTM3U\n",output);
+    }
+    @Test public void readsAndExportsSupportedHttpHeaders() {
+        String source="#EXTM3U\n#EXTINF:-1,Protected channel\n#EXTVLCOPT:http-user-agent=PlayerAgent\n#EXTVLCOPT:http-referrer=https://portal.example/\n#EXTVLCOPT:http-cookie=session%3Dabc\nhttps://stream.example/live.m3u8\n";
+        StreamItem item=M3uParser.parse(source).get(0);
+        assertEquals("PlayerAgent",item.headers.get("User-Agent"));assertEquals("https://portal.example/",item.headers.get("Referer"));assertEquals("session%3Dabc",item.headers.get("Cookie"));
+        StreamItem reparsed=M3uParser.parse(M3uSerializer.serialize(java.util.Collections.singletonList(item))).get(0);
+        assertEquals(item.headers,reparsed.headers);
+    }
 }

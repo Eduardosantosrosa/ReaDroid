@@ -1,13 +1,21 @@
 # Reconstrução Android independente
 
-Projeto Android Java independente baseado em análise estática documentada da referência. Não reutiliza código, imagens, fontes, ícones ou identidade visual do produto original. Nome provisório: **ReaDroid Stream**. Licença deste código novo: MIT; a licença GPL do projeto de referência não é alterada.
+Aplicativo Android em Java/Media3, separado da implementação de referência. Usa análise estática do material fornecido e não reutiliza código, imagens ou identidade visual do original. O código desta reconstrução está licenciado sob MIT; confirme as licenças dos serviços e dependências antes de distribuir.
 
-## Estado verificado
+## Funcionalidades implementadas no código
 
-Implementação parcial: uma fonte Xtream ou URL M3U remota, consultas/listagem básicas, filtros/pesquisa locais, favoritos em SharedPreferences e player Media3. Para Xtream, séries agora consultam `get_series_info`, oferecem episódios por temporada e iniciam a reprodução. EPG, múltiplas fontes, biblioteca/histórico, downloads, editor e backup ainda não estão implementados. A senha é guardada sem cifragem adicional. Os quatro testes JUnit do parser estão escritos; execução e novo build seguem pendentes neste ambiente. Não há APK gerado localmente. Consulte `STATUS_REAL_DO_PROJETO.md` e as matrizes.
+- Fontes M3U remotas/locais e Xtream com cadastro, edição, seleção e exclusão; credenciais, URLs de fontes, biblioteca e URLs de mídia armazenadas com AES-GCM via Android Keystore.
+- Categorias de catálogo, pesquisa sobre o catálogo carregado, favoritos, Assistir depois e histórico.
+- Reprodução Media3 de URLs reconhecidas, HLS e DASH, cabeçalhos M3U, seleção de faixas de áudio/legenda, PiP quando suportado e opção de autoplay.
+- Xtream: autenticação/listagem, detalhes VOD, episódios por temporada, EPG curto e tratamento de respostas limitadas/erros sanitizados.
+- Editor de entradas M3U em memória, exportação M3U; backup/restauração portátil cifrado por frase secreta.
+- Downloads diretos HTTP resumíveis de arquivos de mídia, fila privada do app e reprodução offline.
+- Interface com controles focáveis, launcher Android TV/Leanback, layout adaptável e SAF para arquivos.
 
-## Build
+Isso documenta código presente, não compatibilidade comprovada com cada provedor, codec ou controle remoto. A busca global limita-se ao catálogo que estiver carregado; arquivos HLS/DASH segmentados não são empacotados para download offline. Consulte `MATRIZ_DE_FUNCIONALIDADES.md`, `MATRIZ_DE_TESTES.md` e `LIMITACOES_E_PENDENCIAS.md` para evidência e lacunas.
 
-Consulte `INSTRUCOES_DE_COMPILACAO.md`. Build configurado para AGP 8.6.1, SDK 35, Java 17 e Gradle 8.7 pelo wrapper. O workflow do GitHub Actions executa JUnit e produz APK Debug; também produz Release assinado se os secrets forem configurados. O Termux inspecionado não tem Android SDK, portanto não declare compilação local até obter evidência real.
+## Build e testes
 
-Nenhuma credencial ou playlist real deve ser adicionada ao repositório. A conexão vai diretamente ao host informado pelo usuário. Veja `LIMITACOES_E_PENDENCIAS.md` antes de distribuir.
+AGP 8.6.1, Gradle 8.7, JDK 17, Android SDK 35. Execute `./gradlew :app:testDebugUnitTest :app:assembleDebug`; os testes instrumentados rodam em emulador via workflow. Consulte `INSTRUCOES_DE_COMPILACAO.md`. APK local previamente validado: `app/build/outputs/apk/debug/app-debug.apk` (provisório; artefato remoto final depende do workflow mais recente).
+
+Release assinado requer os quatro secrets descritos nas instruções. Não adicione playlists, credenciais ou keystore ao Git. O código se conecta apenas aos hosts/fontes configurados pelo usuário.
