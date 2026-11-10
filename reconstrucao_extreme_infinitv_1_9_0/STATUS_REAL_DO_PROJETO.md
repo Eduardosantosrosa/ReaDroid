@@ -10,7 +10,7 @@ A reconstrução Java/Android independente implementa múltiplas fontes Xtream/M
 - `:app:testDebugUnitTest` APROVADO (7 testes); `:app:compileDebugAndroidTestJavaWithJavac` APROVADO (compila, não executa os testes instrumentados).
 - `:app:assembleDebug` APROVADO. APK local: `app/build/outputs/apk/debug/app-debug.apk`, SHA-256 `57e47317fc55cb53d6db9f3c2b0886b404a875a70e148806948f8f54b57f9fbc`; assinatura Debug v2 validada e package/SDK conferidos via aapt.
 - Não há binário Emulator neste Termux; testes instrumentados requerem Actions/emulador.
-- Actions no commit `efb8da6` passou JUnit, testes instrumentados em emulador API 35 e Debug APK (run `42827762620`); artefato baixado, SHA-256 `9248c7877a6884817d12f8fe223e9387010511cfe675147598163b327b927161`; Release foi pulado sem secrets de assinatura.
+- Actions no commit `969e2b3` passou JUnit, testes instrumentados em emulador API 35 e Debug APK (run `42891896745`); APK baixado em `app/build/outputs/actions-debug-42891896745/app-debug.apk`, SHA-256 `7ecf7cf89280b0507051183922e9258f8539bf2aa3b5ef353f40e1ba8950f42b`; assinatura v2, package e SDK validados. Release foi pulado sem secrets de assinatura.
 - O workflow Python preexistente falhou nos 42 testes: 3 falhas e 2 erros dentro de `tests/test_ai.py`/banner. Seus arquivos estavam fora do escopo e foram preservados.
 
 ## Implementado com evidência no código

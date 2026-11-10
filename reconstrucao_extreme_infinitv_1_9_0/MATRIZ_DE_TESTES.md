@@ -7,8 +7,8 @@
 | `:app:testDebugUnitTest` (offline, SDK 35) | APROVADO | 7 testes JUnit passaram (parser, cabeçalhos e serialização M3U). |
 | `:app:compileDebugAndroidTestJavaWithJavac` | APROVADO | Classes de teste instrumentado compiladas; execução no emulador pendente. |
 | `:app:assembleDebug` | APROVADO | APK gerado e assinado Debug; apksigner verificou v2, aapt identificou package e min/target SDK. |
-| Testes instrumentados no emulador API 35 | APROVADO | Workflow `42827762620`, inclui storage/backup e Xtream via HTTP mock local. |
-| APK Debug do Actions | APROVADO | Baixado, assinatura v2 verificada; SHA-256 está no status/relatório de entrega. |
+| Testes instrumentados no emulador API 35 | APROVADO | Workflow `42891896745`, inclui storage/backup e Xtream via HTTP mock local. |
+| APK Debug do Actions | APROVADO | Baixado, assinatura v2 verificada; SHA-256 `7ecf7cf89280b0507051183922e9258f8539bf2aa3b5ef353f40e1ba8950f42b`. |
 | Release assinado do Actions | NÃO GERADO | Secrets de assinatura não configurados; workflow pulou esta etapa. |
 | Workflow Python do repositório | FALHOU (preexistente) | Execução anterior: 42 testes, 3 failures e 2 errors em `tests/test_ai.py`/banner, fora desta reconstrução. |
 | APK original e app original | NÃO EXECUTADO | Houve auditoria estática; referência não instalada. |
