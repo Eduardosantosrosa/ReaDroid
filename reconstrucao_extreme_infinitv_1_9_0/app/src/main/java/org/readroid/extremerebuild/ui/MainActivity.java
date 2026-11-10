@@ -62,7 +62,7 @@ public final class MainActivity extends Activity {
         search.setOnEditorActionListener((v,a,e)->{renderRows();return false;});render();
     }
     private TextView text(String s,int size,boolean bold){TextView v=new TextView(this);v.setText(s);v.setTextColor(fg);v.setTextSize(size);if(bold)v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return v;}
-    private Button button(String s){Button b=new Button(this);b.setText(s);b.setTextColor(fg);b.setAllCaps(false);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(panel));b.setFocusable(true);b.setOnFocusChangeListener((v,focused)->b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(focused?accent:panel)));b.setPadding(dp(12),0,dp(12),0);b.setMinimumWidth(dp(72));return b;}
+    private Button button(String s){Button b=new Button(this);b.setText(s);b.setTextColor(fg);b.setAllCaps(false);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(panel));b.setFocusable(true);b.setFocusableInTouchMode(true);b.setOnFocusChangeListener((v,focused)->b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(focused?accent:panel)));b.setPadding(dp(12),0,dp(12),0);b.setMinimumWidth(dp(72));return b;}
     private void loadSavedSource(){String type=store.get("type");if(type.isEmpty())return;if(type.equals("m3u")){loadM3u(store.get("url"),false);}else loadXtream(false);}
     private void addSource(){editSource(null);}
     private void manageSources(){
