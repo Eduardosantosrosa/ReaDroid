@@ -50,6 +50,17 @@ jobs:
       - name: Run JUnit tests
         run: ./gradlew --no-daemon :app:testDebugUnitTest
 
+      - name: Build Debug APK
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: readroid-extreme-debug
+          path: reconstrucao_extreme_infinitv_1_9_0/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Enable KVM for Android emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -64,17 +75,6 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: cd reconstrucao_extreme_infinitv_1_9_0 && ./gradlew --no-daemon :app:connectedDebugAndroidTest
-
-      - name: Build Debug APK
-        run: ./gradlew --no-daemon :app:assembleDebug
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: readroid-extreme-debug
-          path: reconstrucao_extreme_infinitv_1_9_0/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
 
       - name: Build signed Release APK when signing secrets are configured
         id: release

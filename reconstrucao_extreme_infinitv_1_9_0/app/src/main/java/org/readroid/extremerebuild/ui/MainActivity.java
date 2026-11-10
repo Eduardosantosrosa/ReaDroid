@@ -55,7 +55,16 @@ public final class MainActivity extends Activity {
     private void build(){
         root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(bg);setContentView(root);
         TextView brand=text("STREAM LIBRARY",22,true);brand.setPadding(dp(22),dp(18),dp(20),dp(8));root.addView(brand);
-        ScrollView nscroll=new ScrollView(this); nscroll.setHorizontalScrollBarEnabled(false); nav=new LinearLayout(this); nav.setPadding(dp(12),dp(4),dp(12),dp(8)); nscroll.addView(nav);root.addView(nscroll);
+        android.widget.HorizontalScrollView nscroll=new android.widget.HorizontalScrollView(this);
+        nscroll.setHorizontalScrollBarEnabled(false);
+        nscroll.setSmoothScrollingEnabled(true);
+        nscroll.setFocusable(false);
+        nscroll.setFocusableInTouchMode(false);
+        nav=new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setPadding(dp(12),dp(4),dp(12),dp(8));
+        nscroll.addView(nav);
+        root.addView(nscroll,new LinearLayout.LayoutParams(-1,-2));
         for(String s:new String[]{"TV ao vivo","Filmes","Séries","Favoritos","Assistir depois","Histórico","Downloads","Editar M3U","Fontes","Configurações"}){Button x=button(s);x.setOnClickListener(v->{if(s.equals("Fontes")){manageSources();return;}if(s.equals("Editar M3U")&&(!store.get("type").equals("m3u")||entries.isEmpty())){toast("Carregue uma playlist M3U para editar.");return;}section=s;category="Todas";if(store.get("type").equals("xtream")&&(s.equals("TV ao vivo")||s.equals("Filmes")||s.equals("Séries")))loadXtream(false);else render();});nav.addView(x);}
         search=new EditText(this);search.setSingleLine(true);search.setHintTextColor(muted);search.setTextColor(fg);search.setHint("Pesquisar canais e títulos");search.setPadding(dp(15),dp(8),dp(15),dp(8));search.setBackgroundColor(panel);LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(48));sp.setMargins(dp(18),dp(4),dp(18),dp(10));root.addView(search,sp);search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){renderRows();}public void afterTextChanged(android.text.Editable e){}});
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(dp(14),0,dp(14),dp(16));scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
