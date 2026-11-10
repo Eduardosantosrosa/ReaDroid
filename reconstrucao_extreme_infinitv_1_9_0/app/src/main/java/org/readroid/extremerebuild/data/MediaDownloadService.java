@@ -44,7 +44,7 @@ public final class MediaDownloadService extends Service {
             connection.disconnect();activeConnection=null;activeId="";synchronized(pauseIds){if(pauseIds.contains(id)){saveIfPresent(entry.state("paused",received,total));return;}}
             if(complete.exists()&&!complete.delete())throw new java.io.IOException("Não foi possível substituir o arquivo anterior.");if(!partial.renameTo(complete))throw new java.io.IOException("Não foi possível finalizar o arquivo baixado.");saveIfPresent(entry.state("complete",received,total));startInForeground("Download concluído: "+entry.title,received,total);
         }catch(InterruptedException paused){saveIfPresent(entry.state("paused",received,total));}
-        catch(Exception error){DownloadEntry current=find(id);if(current!=null)store.saveDownload(current.state("error",received,total));}
+        catch(Exception error){boolean paused;synchronized(pauseIds){paused=pauseIds.contains(id);}DownloadEntry current=find(id);if(current!=null)store.saveDownload(current.state(paused?"paused":"error",received,total));}
         finally{if(activeConnection!=null&&id.equals(activeId)){activeConnection.disconnect();activeConnection=null;activeId="";}if(find(id)==null){partial.delete();complete.delete();}refreshNotification();}
     }
     private DownloadEntry find(String id){for(DownloadEntry d:store.downloads())if(d.id.equals(id))return d;return null;}

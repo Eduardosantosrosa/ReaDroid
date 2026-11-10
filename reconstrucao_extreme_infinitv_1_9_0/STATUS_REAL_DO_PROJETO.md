@@ -8,9 +8,9 @@ A reconstrução Java/Android independente implementa múltiplas fontes Xtream/M
 
 - SDK local `$HOME/android-sdk`: API 35 e Build Tools 35.0.0. Projeto usa JDK 17, Gradle Wrapper 8.7 e AGP 8.6.1.
 - `:app:testDebugUnitTest` APROVADO (7 testes); `:app:compileDebugAndroidTestJavaWithJavac` APROVADO (compila, não executa os testes instrumentados).
-- `:app:assembleDebug` APROVADO. APK local: `app/build/outputs/apk/debug/app-debug.apk`, SHA-256 `ff63b1dec44a029479d224cd301476796477a3a8283e4d1a878bb173cac3b66c`; assinatura Debug v2 validada e package/SDK conferidos via aapt.
+- `:app:assembleDebug` APROVADO. APK local: `app/build/outputs/apk/debug/app-debug.apk`, SHA-256 `57e47317fc55cb53d6db9f3c2b0886b404a875a70e148806948f8f54b57f9fbc`; assinatura Debug v2 validada e package/SDK conferidos via aapt.
 - Não há binário Emulator neste Termux; testes instrumentados requerem Actions/emulador.
-- Actions no commit `b8c017d` passou JUnit e Debug; Release foi pulado sem secrets de assinatura. Workflow atualizado com testes instrumentados aguarda a próxima execução.
+- Actions no commit `efb8da6` passou JUnit, testes instrumentados em emulador API 35 e Debug APK (run `42827762620`); artefato baixado, SHA-256 `9248c7877a6884817d12f8fe223e9387010511cfe675147598163b327b927161`; Release foi pulado sem secrets de assinatura.
 - O workflow Python preexistente falhou nos 42 testes: 3 falhas e 2 erros dentro de `tests/test_ai.py`/banner. Seus arquivos estavam fora do escopo e foram preservados.
 
 ## Implementado com evidência no código
@@ -29,4 +29,4 @@ A reconstrução Java/Android independente implementa múltiplas fontes Xtream/M
 
 ## Não comprovado
 
-Não testados em aparelho/serviço real: reprodução/codec, D-pad/TV, Android 10 e provedores Xtream/M3U. Busca não agrega fontes descarregadas, XMLTV/DRM não estão cobertos e downloads HLS/DASH segmentados não são suportados. Tests instrumentados ainda aguardam emulador. Release assinado depende de secrets privados não configurados.
+Não testados em aparelho/serviço real: reprodução/codec, D-pad/TV, Android 10 e provedores Xtream/M3U. Busca não agrega fontes descarregadas, XMLTV/DRM não estão cobertos e downloads HLS/DASH segmentados não são suportados. Os testes instrumentados passaram no emulador API 35. Release assinado depende de secrets privados não configurados.
