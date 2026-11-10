@@ -1,0 +1,46 @@
+name: Python Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - reconstrucao-python
+    paths:
+      - "reconstrucao_python/**"
+      - ".github/workflows/python-apk.yml"
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests
+
+      - name: Run tests
+        working-directory: reconstrucao_python
+        run: python -m unittest discover -s tests -v
+
+      - name: Build APK with Buildozer
+        id: buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        with:
+          workdir: reconstrucao_python
+          buildozer_version: stable
+          command: buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-tv-debug-apk
+          path: ${{ steps.buildozer.outputs.filename }}
+          if-no-files-found: error
