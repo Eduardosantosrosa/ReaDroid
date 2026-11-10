@@ -33,7 +33,8 @@
 | XMLTV/EPG, fuso e now/next | NÃO CRIADO (função ausente) |
 | Favoritos, fontes, migração, segredo em repouso e backup | APROVADO no emulador |
 | Downloads: URL cifrada | APROVADO no emulador; transporte ainda sem teste instrumentado |
-| Navegação, D-pad, foco, back e acessibilidade | NÃO CRIADO; teste manual em dispositivo pendente |
+| Navegação de seção e foco visual | Teste instrumentado criado/compilado; aguarda Actions |
+| Fluxo D-pad/back e acessibilidade em dispositivo físico | TESTE MANUAL PENDENTE |
 | Player HLS, DASH, TS, headers, lifecycle, áudio/legendas | NÃO CRIADO; teste manual pendente |
 | Rede: offline, timeout, HTTP status e JSON inválido | NÃO CRIADO |
 | Android 10 (API 29) | TESTE MANUAL PENDENTE |
