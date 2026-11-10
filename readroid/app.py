@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import builtins as _builtins
+import json
 import re
 import shutil
 import subprocess
@@ -347,6 +348,198 @@ def browse_generated_files() -> None:
             print(YELLOW + "Opção inválida." + RESET)
 
 
+# ------------------------------------------------------------------ histórico do acompanhamento
+
+def process_history() -> None:
+    """Consulta resumos e registros mantidos de execuções anteriores."""
+    folder = REPORTS / "process_runs"
+    folder.mkdir(parents=True, exist_ok=True)
+    while True:
+        runs = sorted(folder.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True)
+        print(CYAN + "\nHISTÓRICO DO ACOMPANHAMENTO" + RESET)
+        for index, path in enumerate(runs[:30], 1):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                print(f" [{index}] {data.get('started_at', '')[:19]} · {data.get('status')} · {sanitize(data.get('title', ''))}")
+            except (OSError, ValueError):
+                print(f" [{index}] Registro incompleto: {path.name}")
+        print(" [0] Voltar")
+        choice = safe_input("> ").strip()
+        if choice in ("", "0"):
+            return
+        if not choice.isdigit() or not 1 <= int(choice) <= min(len(runs), 30):
+            print(YELLOW + "Seleção inválida." + RESET)
+            continue
+        selected = runs[int(choice) - 1]
+        log = selected.with_suffix(".jsonl")
+        print("Resumo:", selected)
+        print("Registro completo:", log)
+        if log.is_file():
+            view_text_file(log)
+
+
+def build_demo_android() -> None:
+    """Runs JVM tests, offline Gradle build, and checks the actual debug APK."""
+    project = BASE / "android-app"
+    apk = project / "app/build/outputs/apk/debug/app-debug.apk"
+    gradle = shutil.which("gradle")
+    sdk = next((candidate for candidate in (
+        Path(os.environ.get("ANDROID_SDK_ROOT", "")),
+        Path(os.environ.get("ANDROID_HOME", "")),
+        Path.home() / "android-sdk",
+    ) if str(candidate) not in ("", ".") and (candidate / "platforms").is_dir()), None)
+    if not gradle:
+        print(RED + "Gradle não está instalado." + RESET)
+        return
+    if not sdk:
+        print(RED + "Android SDK não encontrado. Esperado em $ANDROID_SDK_ROOT ou ~/android-sdk." + RESET)
+        return
+    if safe_input("Executar testes e compilar o APK de demonstração? (s/N): ").strip().lower() != "s":
+        return
+
+    env = os.environ.copy()
+    env["ANDROID_HOME"] = str(sdk)
+    env["ANDROID_SDK_ROOT"] = str(sdk)
+
+    def stream(command: list[str], stage: str, emit, cwd: Path = project) -> tuple[int, list[str]]:
+        emit(stage, stage=stage)
+        lines: list[str] = []
+        process = subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True, bufsize=1)
+        assert process.stdout is not None
+        for raw in process.stdout:
+            line = sanitize(raw.rstrip())
+            if not line:
+                continue
+            lines.append(line)
+            if line.startswith("> Task "):
+                task = line.removeprefix("> Task ").split(" ", 1)[0]
+                upper = line.upper()
+                kind = "error" if " FAILED" in upper else "warning" if " SKIPPED" in upper else "info"
+                emit(line, kind=kind, stage=task)
+            else:
+                lower = line.lower()
+                kind = "error" if "failed" in lower or "error" in lower else "warning" if "warning" in lower else "info"
+                emit(line, kind=kind)
+        return process.wait(), lines
+
+    def operation(emit) -> dict:
+        test_code, test_log = stream(["sh", "run-tests.sh"], "Testes JVM do catálogo e da navegação", emit)
+        if test_code:
+            return {"ok": False, "stage": "testes", "test_exit_code": test_code,
+                    "last_output": test_log[-12:]}
+
+        build_code, build_log = stream(
+            [gradle, "--offline", "--no-daemon", "--console=plain", "assembleDebug"],
+            "Compilação Gradle de depuração", emit,
+        )
+        if build_code or not apk.is_file():
+            return {"ok": False, "stage": "compilação", "gradle_exit_code": build_code,
+                    "apk_exists": apk.is_file(), "last_output": build_log[-16:]}
+
+        import zipfile
+        emit("Verificando estrutura ZIP e manifesto Android", stage="Validação estrutural do APK")
+        try:
+            with zipfile.ZipFile(apk) as archive:
+                bad_member = archive.testzip()
+                names = set(archive.namelist())
+                has_manifest = "AndroidManifest.xml" in names
+                has_dex = any(name.startswith("classes") and name.endswith(".dex") for name in names)
+            if bad_member or not has_manifest or not has_dex:
+                return {"ok": False, "stage": "estrutura", "bad_member": bad_member,
+                        "has_manifest": has_manifest, "has_dex": has_dex, "apk": str(apk)}
+        except (OSError, zipfile.BadZipFile) as exc:
+            return {"ok": False, "stage": "estrutura", "error": type(exc).__name__, "apk": str(apk)}
+
+        aapt = shutil.which("aapt")
+        if not aapt:
+            return {"ok": False, "stage": "aapt", "message": "aapt ausente", "apk": str(apk)}
+        code, badging = stream([aapt, "dump", "badging", str(apk)], "Leitura do pacote Android (aapt)", emit)
+        package_line = next((line for line in badging if line.startswith("package: name=")), "")
+        if code or "package: name='br.com.readroid.catalogodemo'" not in package_line:
+            return {"ok": False, "stage": "manifesto", "package_line": package_line, "apk": str(apk)}
+
+        apksigner = shutil.which("apksigner")
+        if not apksigner:
+            return {"ok": False, "stage": "assinatura", "message": "apksigner ausente", "apk": str(apk)}
+        code, signature_log = stream([apksigner, "verify", "--verbose", "--print-certs", str(apk)],
+                                    "Verificação criptográfica da assinatura", emit)
+        verified = code == 0 and any("Verifies" in line for line in signature_log)
+        if not verified:
+            return {"ok": False, "stage": "assinatura", "last_output": signature_log[-12:], "apk": str(apk)}
+
+        helper_apk = project / "inspector-helper/build/outputs/apk/debug/inspector-helper-debug.apk"
+        emit("Verificando APK auxiliar do Device Inspector", stage="Validação do auxiliar Android")
+        if not helper_apk.is_file():
+            return {"ok": False, "stage": "auxiliar", "message": "APK auxiliar não foi gerado",
+                    "apk": str(apk), "helper_apk": str(helper_apk)}
+        try:
+            with zipfile.ZipFile(helper_apk) as archive:
+                helper_zip_ok = archive.testzip() is None
+                helper_names = set(archive.namelist())
+            helper_has_manifest = helper_zip_ok and "AndroidManifest.xml" in helper_names
+            helper_has_dex = helper_zip_ok and any(name.startswith("classes") and name.endswith(".dex")
+                                                    for name in helper_names)
+        except (OSError, zipfile.BadZipFile):
+            helper_has_manifest = helper_has_dex = False
+        if not helper_has_manifest or not helper_has_dex:
+            return {"ok": False, "stage": "auxiliar_estrutura", "apk": str(apk),
+                    "helper_apk": str(helper_apk), "helper_has_manifest": helper_has_manifest,
+                    "helper_has_dex": helper_has_dex}
+        helper_code, helper_badging = stream(
+            [aapt, "dump", "badging", str(helper_apk)], "Lendo pacote do auxiliar (aapt)", emit)
+        helper_package = next((line for line in helper_badging if line.startswith("package: name=")), "")
+        if helper_code or "package: name='org.readroid.deviceinspector'" not in helper_package:
+            return {"ok": False, "stage": "auxiliar_manifesto", "apk": str(apk),
+                    "helper_apk": str(helper_apk), "package_line": helper_package}
+        helper_sign_code, helper_sign_log = stream(
+            [apksigner, "verify", "--verbose", str(helper_apk)],
+            "Verificando assinatura do auxiliar", emit)
+        if helper_sign_code or not any("Verifies" in line for line in helper_sign_log):
+            return {"ok": False, "stage": "auxiliar_assinatura", "apk": str(apk),
+                    "helper_apk": str(helper_apk), "last_output": helper_sign_log[-8:]}
+
+        emit("APK de demonstração e auxiliar compilados; estrutura, pacote e assinaturas conferidos.",
+             "success", "APKs de depuração validados")
+        return {"ok": True, "apk": str(apk), "package": "br.com.readroid.catalogodemo",
+                "helper_apk": str(helper_apk), "helper_package": "org.readroid.deviceinspector",
+                "archive_valid": True, "has_manifest": True, "has_dex": True,
+                "signature_verified": True, "helper_archive_valid": True,
+                "helper_signature_verified": True, "tests_passed": True}
+
+    from .process_viewer import run_with_viewer
+    try:
+        result, run = run_with_viewer(
+            REPORTS, "Testes e geração do APK Android independente", operation,
+            summary=lambda value: {**value,
+                                   "monitor_status": "concluído" if value.get("ok") else "com erro"},
+        )
+    except Exception as exc:
+        print(RED + f"Build da demonstração falhou: {sanitize(exc)}" + RESET)
+        return
+    if not result:
+        return
+    print("Resultado:", "APK validado" if result.get("ok") else "falhou")
+    if result.get("apk"):
+        print("APK:", result["apk"])
+    if result.get("helper_apk"):
+        print("Auxiliar Device Inspector:", result["helper_apk"])
+    print("Resumo:", result)
+    print("Registro:", run.log_path)
+    print(" [1] Abrir pasta do APK  [2] Copiar registro  [0] Continuar")
+    action = safe_input("> ").strip()
+    if action == "1":
+        open_folder(apk.parent)
+    elif action == "2":
+        clipboard = shutil.which("termux-clipboard-set")
+        if clipboard:
+            with run.log_path.open("r", encoding="utf-8") as log:
+                copied = subprocess.run([clipboard], input=log.read(), text=True, capture_output=True)
+            print("Registro copiado." if copied.returncode == 0 else "Falha ao copiar o registro.")
+        else:
+            print("termux-clipboard-set não encontrado. Registro:", run.log_path)
+
+
 # ------------------------------------------------------------------ reconstrução e compilação
 
 def prompt_rename_package(decoded: Path) -> None:
@@ -408,6 +601,8 @@ def rebuild_and_sign() -> None:
     decoded = ask_decoded_dir()
     if decoded is None:
         return
+    if safe_input("Iniciar o processo de compilação e acompanhamento? (s/N): ").strip().lower() != "s":
+        return
     if not (decoded / "AndroidManifest.xml").is_file() or not (decoded / "apktool.yml").is_file():
         print(YELLOW + "Essa pasta não parece ser uma saída do Apktool (opção 5). Confira o caminho." + RESET)
         if safe_input("Continuar mesmo assim? (s/N): ").strip().lower() != "s":
@@ -430,10 +625,23 @@ def rebuild_and_sign() -> None:
     name = decoded.name.replace("_apktool", "") or "app"
     work_dir = BUILDS / f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-    def say(msg: str) -> None:
-        print(CYAN + " · " + msg + RESET)
-
-    result = build_pipeline(decoded, work_dir, KEYSTORE, DEFAULT_ALIAS, DEFAULT_STOREPASS, edits, say)
+    from .process_viewer import run_with_viewer
+    result, run = run_with_viewer(
+        REPORTS, "Compilação, assinatura e verificação do APK",
+        lambda emit: build_pipeline(decoded, work_dir, KEYSTORE, DEFAULT_ALIAS,
+                                    DEFAULT_STOREPASS, edits,
+                                    lambda message: emit(message, stage=message)),
+        summary=lambda value: {"ok": value.get("ok", False),
+                               "monitor_status": ("concluído" if value.get("ok") and
+                                                  value.get("steps", {}).get("verify", {}).get("ok") is True
+                                                  else "concluído com ressalvas" if value.get("ok")
+                                                  else "com erro"),
+                               "final_apk": value.get("final_apk"),
+                               "steps": {key: step.get("ok") for key, step in value.get("steps", {}).items()
+                                         if isinstance(step, dict)}},
+    )
+    if result is None:
+        return
     steps = result["steps"]
     for name_step, label in (("quick_edits", "Edições"), ("rebuild", "Reconstrução (apktool b)"),
                              ("align", "Alinhamento (zipalign)"), ("keystore", "Chave de assinatura"),
@@ -450,6 +658,8 @@ def rebuild_and_sign() -> None:
             print(YELLOW + "      " + step["warning"] + RESET)
         if not ok and step.get("stderr"):
             print(DIM + "      " + step["stderr"][-400:] + RESET)
+    print("Testes funcionais do aplicativo: não executados por este fluxo.")
+    print("Validação de instalação/inicialização em dispositivo: não executada.")
 
     if result["ok"]:
         final = Path(result["final_apk"])
@@ -466,6 +676,19 @@ def rebuild_and_sign() -> None:
             subprocess.run([shutil.which("termux-open"), str(final)], check=False)
     else:
         print(RED + "\nA reconstrução não terminou. Veja os passos acima." + RESET)
+    print("Registro da execução:", run.log_path)
+    print(" [1] Abrir pasta de resultados  [2] Copiar registro  [0] Continuar")
+    action = safe_input("> ").strip()
+    if action == "1":
+        open_folder(work_dir)
+    elif action == "2":
+        clipboard = shutil.which("termux-clipboard-set")
+        if clipboard:
+            with run.log_path.open("r", encoding="utf-8") as log:
+                copied = subprocess.run([clipboard], input=log.read(), text=True, capture_output=True)
+            print("Registro copiado." if copied.returncode == 0 else "Falha ao copiar; registro:", run.log_path)
+        else:
+            print("termux-clipboard-set não encontrado. Registro:", run.log_path)
 
 
 def keystore_menu() -> None:
@@ -500,6 +723,10 @@ MENU = [
     ("10", "Edições rápidas e renomear pacote (pré-build)"),
     ("11", "Reconstruir, alinhar e assinar APK"),
     ("12", "Gerenciar chave de assinatura"),
+    ("15", "Reconstruir APK completo (Java/XML)"),
+    ("16", "Histórico do acompanhamento"),
+    ("17", "Testar e compilar app de demonstração"),
+    ("18", "Inspeção automatizada do dispositivo"),
     ("14", "Idioma / Language / اللغة / भाषा"),
 ]
 
@@ -607,6 +834,10 @@ def _menu_items(compact: bool = False) -> list[str]:
         "11": "Assinar APK",
         "12": "Chave APK",
         "13": "Assistente IA",
+        "15": "Reconstruir APK",
+        "16": "Histórico de processos",
+        "17": "Build app Android",
+        "18": "Inspeção do dispositivo",
         "14": "Idioma",
         "0": "Sair",
     }
@@ -778,6 +1009,58 @@ def main() -> None:
             keystore_menu()
         elif choice == "13" and ai_available():
             ai_assistant()
+        elif choice == "15":
+            apk = ask_apk()
+            if apk:
+                try:
+                    from .reconstructor import reconstruct_apk
+                    if safe_input("Iniciar análise e geração do projeto parcial? (s/N): ").strip().lower() != "s":
+                        continue
+                    from .process_viewer import run_with_viewer
+                    report, run = run_with_viewer(
+                        REPORTS, "Análise e geração do projeto Android",
+                        lambda emit: reconstruct_apk(apk, OUTPUTS,
+                                                     progress=lambda msg: emit(msg, stage=msg)),
+                        summary=lambda value: {"status": value.get("status"),
+                                               "monitor_status": "concluído com ressalvas",
+                                               "generated_project": bool(value.get("generated_project")),
+                                               "apk_generated": False},
+                    )
+                    generated = report.get("generated_project")
+                    if generated:
+                        print(YELLOW + "\nProjeto parcial; não representa reconstrução completa." + RESET)
+                        print("Projeto:", generated["project_root"])
+                        print("Layouts XML com evidência:", generated["xml_layouts_generated"])
+                        print("Relatório de cobertura:", Path(generated["project_root"]) / "coverage_report.json")
+                    else:
+                        print(YELLOW + "\nReconstrução indisponível: evidências visuais insuficientes." + RESET)
+                        print("Relatório:", Path(report.get("output_root", OUTPUTS)))
+                    for warning in report.get("warnings", []):
+                        print(YELLOW + warning + RESET)
+                    print("Este fluxo não compila APK; ele gera um projeto parcial e relatório.")
+                    print("Registro:", run.log_path)
+                    print(" [1] Abrir pasta de resultados  [2] Copiar registro  [0] Continuar")
+                    action = safe_input("> ").strip()
+                    if action == "1":
+                        open_folder(Path(report.get("output_root", OUTPUTS)))
+                    elif action == "2":
+                        clipboard = shutil.which("termux-clipboard-set")
+                        if clipboard:
+                            with run.log_path.open("r", encoding="utf-8") as log:
+                                copied = subprocess.run([clipboard], input=log.read(), text=True, capture_output=True)
+                            print("Registro copiado." if copied.returncode == 0 else "Falha ao copiar o registro.")
+                        else:
+                            print("termux-clipboard-set não encontrado. Registro:", run.log_path)
+                except Exception as exc:
+                    print(RED + f"Reconstrução falhou: {sanitize(exc)}" + RESET)
+                    print("O APK original não foi modificado.")
+        elif choice == "16":
+            process_history()
+        elif choice == "17":
+            build_demo_android()
+        elif choice == "18":
+            from .device_inspector import inspect_device
+            inspect_device(REPORTS, safe_input, print)
         elif choice == "14":
             language_menu()
         elif choice in ("0", ""):

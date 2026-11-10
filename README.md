@@ -83,6 +83,30 @@ Then run `python3 readroid.py`. Tested on Debian with system apktool/jadx.
 
 The APK path can be absolute or relative to the current working directory. For the JADX option, the tool uses at most four threads (default: two) to reduce memory pressure. Large APKs may still require significant RAM and storage.
 
+## Independent Android demo app and process monitor (options 11, 15, and 17)
+
+Long rebuilds and reconstruction analysis show a live terminal dashboard in
+Termux. The dashboard reports the current real stage, elapsed time, status, and
+messages emitted by the active workflow. It does not invent a percentage when
+the underlying tools do not provide measurable progress.
+
+Each run is retained under `reports/process_runs/` as a JSON summary and an
+append-only JSONL event log. Use menu option 16 to inspect earlier runs. After a
+run, the menu offers its output folder and copying the full log with
+`termux-clipboard-set` (from the `termux-api` package).
+
+Option 11 monitors the existing Apktool rebuild, alignment, signing, and
+signature verification. Option 15 analyzes an APK and generates a partial
+Android project when evidence permits; it does not compile that project into
+an APK. Option 17 runs the independent demo app's local tests, builds a debug
+APK offline, and checks its archive, package metadata, and signature.
+
+The independent Java app is in `android-app/`. It uses the sanitized layout
+coverage report as low-confidence structural evidence and has a local,
+fictional catalog with home/list/detail navigation. It does not claim to
+reproduce unverified login, network, or media playback behavior. Device launch
+testing still requires a compatible emulator or attached Android device.
+
 ## Rebuilding, Alignment, and Signing (options 5, 10, 11, 12)
 
 This workflow provides an install-ready APK without needing to memorize `apktool`/`zipalign`/`apksigner` commands:

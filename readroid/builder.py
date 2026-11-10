@@ -265,33 +265,50 @@ def build_pipeline(decoded_dir: Path, work_dir: Path, keystore: Path, alias: str
     steps: dict[str, Any] = {}
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    def report_step(label: str, result: dict[str, Any]) -> None:
+        if result.get("ok") is True:
+            say(f"{label}: concluído")
+        elif result.get("skipped"):
+            say(f"{label}: aviso — {result.get('message', 'etapa pulada')}")
+        else:
+            say(f"{label}: erro reportado; consulte os detalhes da etapa no resultado")
+
     if quick_edits:
         say("aplicando edições rápidas no manifesto")
         steps["quick_edits"] = apply_quick_edits(decoded_dir, quick_edits)
+        report_step("Edições rápidas", steps["quick_edits"])
 
     say("reconstruindo o APK (apktool b)")
     unsigned = work_dir / "unsigned.apk"
     steps["rebuild"] = rebuild_apk(decoded_dir, unsigned)
+    report_step("Reconstrução apktool", steps["rebuild"])
     if not steps["rebuild"]["ok"]:
         return {"ok": False, "steps": steps, "final_apk": None}
 
     say("alinhando (zipalign)")
     aligned = work_dir / "aligned.apk"
     steps["align"] = align_apk(unsigned, aligned)
+    report_step("Alinhamento", steps["align"])
     to_sign = aligned if steps["align"].get("ok") else unsigned
 
     say("preparando a chave de assinatura")
     steps["keystore"] = ensure_keystore(keystore, alias, storepass)
+    report_step("Chave de assinatura", steps["keystore"])
     if not steps["keystore"]["ok"]:
         return {"ok": False, "steps": steps, "final_apk": None}
 
     say("assinando o APK")
     steps["sign"] = sign_apk(to_sign, keystore, alias, storepass)
+    report_step("Assinatura", steps["sign"])
     if not steps["sign"]["ok"]:
         return {"ok": False, "steps": steps, "final_apk": None}
 
     say("verificando a assinatura")
     steps["verify"] = verify_apk(to_sign)
+    if steps["verify"].get("ok") is None:
+        say("Verificação da assinatura: aviso — apksigner indisponível; validação pulada")
+    else:
+        report_step("Verificação da assinatura", steps["verify"])
     if steps["verify"]["ok"] is False:
         # ok=None significa "apksigner não instalado" (verificação pulada), não falha.
         # Já False é um APK que o apksigner explicitamente reprovou: não pode sair
