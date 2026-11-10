@@ -9,3 +9,16 @@ builds/
 .venv/
 *.bak-*
 __pycache__/
+
+# Artefatos locais e arquivos de auditoria
+*.bak
+*.class
+*.dex
+*.apk
+*.apk.idsig
+*.keystore
+*.jks
+**/.gradle/
+**/build/
+reconstrucao_smarter_play_pro/classes/
+reconstrucao_smarter_play_pro/auditoria/
