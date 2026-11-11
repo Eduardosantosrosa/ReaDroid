@@ -163,12 +163,16 @@ class PlaylistScreen(ContentScreen):
         ).start()
 
     def _load_m3u(self, app, url):
-        import requests
+        from urllib.request import Request, urlopen
 
         try:
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-            playlist = parse_m3u(response.text, source=url)
+            request = Request(
+                url, headers={"User-Agent": "IndependentPythonTV/0.1"}
+            )
+            with urlopen(request, timeout=30) as response:
+                charset = response.headers.get_content_charset() or "utf-8"
+                content = response.read().decode(charset, errors="replace")
+            playlist = parse_m3u(content, source=url)
 
             if not playlist.items:
                 raise ValueError("Nenhum canal reconhecido na playlist.")

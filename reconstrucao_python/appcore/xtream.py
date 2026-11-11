@@ -1,6 +1,8 @@
 """Cliente Xtream Codes com timeout e failover entre domínios."""
-from urllib.parse import urlparse, urlunparse
-import requests
+import json
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse, urlunparse, urlencode
+from urllib.request import Request, urlopen
 
 
 class XtreamError(RuntimeError):
@@ -15,8 +17,6 @@ class XtreamClient:
         self.password = password
         self.timeout = timeout
         self.active_host = 0
-        self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "IndependentPythonTV/0.1"})
 
     @staticmethod
     def _normalise(host):
@@ -40,14 +40,17 @@ class XtreamClient:
             index = (self.active_host + offset) % len(self.hosts)
             url = self.hosts[index] + "/player_api.php"
             try:
-                response = self.session.get(
-                    url, params=params, timeout=self.timeout
+                query = urlencode(params)
+                request = Request(
+                    url + "?" + query,
+                    headers={"User-Agent": "IndependentPythonTV/0.1"}
                 )
-                response.raise_for_status()
-                data = response.json()
+                with urlopen(request, timeout=self.timeout) as response:
+                    payload = response.read().decode("utf-8-sig")
+                data = json.loads(payload)
                 self.active_host = index
                 return data
-            except (requests.RequestException, ValueError) as exc:
+            except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
                 last_error = exc
 
         raise XtreamError(f"Todos os servidores Xtream falharam: {last_error}")
