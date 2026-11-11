@@ -17,7 +17,7 @@ class MenuScreen(Screen):
         super().__init__(**kwargs)
         root = BoxLayout(orientation="vertical", padding=dp(18), spacing=dp(12))
         root.add_widget(Label(
-            text="[b]INDEPENDENT TV[/b]\\nPython edition",
+            text="[b]INDEPENDENT TV[/b]\nPython edition",
             markup=True, font_size="26sp", size_hint_y=None, height=dp(90)
         ))
 
@@ -37,7 +37,11 @@ class MenuScreen(Screen):
         self.add_widget(root)
 
     def open_section(self, target):
-        self.manager.current = target
+        app = App.get_running_app()
+        if app:
+            app.navigate(target)
+        else:
+            self.manager.current = target
 
 
 class ContentScreen(Screen):
@@ -46,7 +50,7 @@ class ContentScreen(Screen):
         layout = BoxLayout(orientation="vertical", padding=dp(14), spacing=dp(8))
         header = BoxLayout(size_hint_y=None, height=dp(52))
         back = Button(text="‹ VOLTAR", size_hint_x=None, width=dp(120))
-        back.bind(on_release=lambda *_: setattr(self.manager, "current", "home"))
+        back.bind(on_release=lambda *_: App.get_running_app().go_back())
         header.add_widget(back)
         header.add_widget(Label(text=title, font_size="20sp"))
         layout.add_widget(header)
@@ -56,6 +60,10 @@ class ContentScreen(Screen):
 
 
     def on_pre_enter(self, *_args):
+        # PlaylistScreen possui formulário próprio de conexão.
+        if self.name == "playlist":
+            return
+
         app = App.get_running_app()
         if app and hasattr(app, "render_catalog"):
             app.render_catalog(self.name, self.body)
@@ -65,41 +73,50 @@ class ContentScreen(Screen):
 class PlaylistScreen(ContentScreen):
     def __init__(self, **kwargs):
         super().__init__("Adicionar conexão", **kwargs)
-        from kivy.uix.spinner import Spinner
-
         self.body.orientation = "vertical"
-        self.mode = Spinner(
-            text="M3U",
-            values=("M3U", "Xtream"),
+        self.mode = "M3U"
+
+        self.mode_button = Button(
+            text="TIPO DE CONEXÃO: M3U  ▼",
             size_hint_y=None,
             height=dp(48)
         )
-        self.body.add_widget(self.mode)
+        self.mode_button.bind(on_release=self.toggle_mode)
+        self.body.add_widget(self.mode_button)
 
+        self.m3u_box = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=dp(52)
+        )
         self.url = TextInput(
             hint_text="URL M3U/M3U8",
             multiline=False,
             size_hint_y=None,
             height=dp(48)
         )
-        self.body.add_widget(self.url)
+        self.m3u_box.add_widget(self.url)
+        self.body.add_widget(self.m3u_box)
 
+        self.xtream_box = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=0,
+            opacity=0,
+            disabled=True
+        )
         self.host = TextInput(
             hint_text="Servidor Xtream",
             multiline=False,
             size_hint_y=None,
             height=dp(48)
         )
-        self.body.add_widget(self.host)
-
         self.username = TextInput(
             hint_text="Usuário Xtream",
             multiline=False,
             size_hint_y=None,
             height=dp(48)
         )
-        self.body.add_widget(self.username)
-
         self.password = TextInput(
             hint_text="Senha Xtream",
             password=True,
@@ -107,7 +124,10 @@ class PlaylistScreen(ContentScreen):
             size_hint_y=None,
             height=dp(48)
         )
-        self.body.add_widget(self.password)
+        self.xtream_box.add_widget(self.host)
+        self.xtream_box.add_widget(self.username)
+        self.xtream_box.add_widget(self.password)
+        self.body.add_widget(self.xtream_box)
 
         self.result = Label(
             text="Selecione M3U ou Xtream.",
@@ -128,12 +148,34 @@ class PlaylistScreen(ContentScreen):
         # Preserva os campos do formulário ao abrir esta tela.
         pass
 
+    def toggle_mode(self, *_):
+        if self.mode == "M3U":
+            self.mode = "Xtream"
+            self.mode_button.text = "TIPO DE CONEXÃO: XTREAM  ▼"
+            self.m3u_box.height = 0
+            self.m3u_box.opacity = 0
+            self.m3u_box.disabled = True
+            self.xtream_box.height = dp(3 * 52)
+            self.xtream_box.opacity = 1
+            self.xtream_box.disabled = False
+            self.result.text = "Informe servidor, usuário e senha Xtream."
+        else:
+            self.mode = "M3U"
+            self.mode_button.text = "TIPO DE CONEXÃO: M3U  ▼"
+            self.xtream_box.height = 0
+            self.xtream_box.opacity = 0
+            self.xtream_box.disabled = True
+            self.m3u_box.height = dp(52)
+            self.m3u_box.opacity = 1
+            self.m3u_box.disabled = False
+            self.result.text = "Informe a URL da playlist M3U."
+
     def load_playlist(self, *_):
         from threading import Thread
 
         app = App.get_running_app()
 
-        if self.mode.text == "M3U":
+        if self.mode == "M3U":
             url = self.url.text.strip()
             if not url:
                 self.result.text = "Informe a URL M3U."
@@ -286,6 +328,8 @@ class PythonTVApp(App):
 
         db_path = Path(self.user_data_dir) / "independent_tv.db"
         self.storage = Storage(str(db_path))
+        self.navigation_stack = []
+        self.series_request_id = 0
 
         manager = ScreenManager()
         manager.add_widget(MenuScreen(name="home"))
@@ -302,6 +346,38 @@ class PythonTVApp(App):
 
         Window.bind(on_key_down=self.on_key_down)
         return manager
+
+    def navigate(self, target):
+        if not self.root:
+            return
+
+        current = self.root.current
+
+        if current == "series" and target != "series":
+            self.series_request_id += 1
+
+        if current != target:
+            self.navigation_stack.append(
+                lambda previous=current:
+                setattr(self.root, "current", previous)
+            )
+
+        self.root.current = target
+
+    def go_back(self):
+        if self.root and self.root.current == "series":
+            self.series_request_id += 1
+
+        if self.navigation_stack:
+            previous = self.navigation_stack.pop()
+            previous()
+            return True
+
+        if self.root and self.root.current != "home":
+            self.root.current = "home"
+            return True
+
+        return False
 
     def render_catalog(self, section, container):
         if container is None:
@@ -341,6 +417,214 @@ class PythonTVApp(App):
                 text=f"{item.name}\n{item.category}",
                 size_hint_y=None,
                 height=dp(64),
+                halign="left"
+            )
+
+            if section == "series":
+                button.bind(
+                    on_release=lambda _btn, selected=item:
+                    self.open_series(selected)
+                )
+            else:
+                button.bind(
+                    on_release=lambda _btn, selected=item:
+                    self.play_item(selected)
+                )
+
+            listing.add_widget(button)
+
+        scroll.add_widget(listing)
+        container.add_widget(scroll)
+
+    def open_series(self, series):
+        from threading import Thread
+
+        if not self.xtream_client:
+            self.show_item_message(series)
+            return
+
+        screen = self.root.get_screen("series")
+        container = screen.body
+
+        self.series_request_id += 1
+        request_id = self.series_request_id
+
+        self.navigation_stack.append(
+            lambda: self.render_catalog("series", container)
+        )
+
+        container.clear_widgets()
+        container.add_widget(Label(
+            text=f"Carregando temporadas e episódios de {series.name}..."
+        ))
+
+        series_id = series.metadata.get("series_id")
+
+        if series_id is None:
+            container.clear_widgets()
+            container.add_widget(Label(
+                text="Identificador da série não encontrado."
+            ))
+            return
+
+        def worker():
+            try:
+                info = self.xtream_client.series_info(series_id)
+                if not isinstance(info, dict):
+                    raise ValueError("Resposta de detalhes da série inválida.")
+
+                episodes = info.get("episodes") or {}
+                if not isinstance(episodes, (dict, list)):
+                    raise ValueError("Formato de episódios não reconhecido.")
+
+                def show_result(_dt):
+                    if (
+                        request_id != self.series_request_id
+                        or self.root.current != "series"
+                    ):
+                        return
+
+                    self.render_series_seasons(
+                        series, info, container
+                    )
+
+                Clock.schedule_once(show_result, 0)
+            except Exception as exc:
+                message = str(exc)
+
+                def show_error(_dt):
+                    if (
+                        request_id != self.series_request_id
+                        or self.root.current != "series"
+                    ):
+                        return
+
+                    container.clear_widgets()
+                    container.add_widget(Button(
+                        text="‹ VOLTAR ÀS SÉRIES",
+                        size_hint_y=None,
+                        height=dp(48),
+                        on_release=lambda *_: self.go_back()
+                    ))
+                    container.add_widget(Label(
+                        text=f"Não foi possível carregar a série:\n{message}"
+                    ))
+
+                Clock.schedule_once(show_error, 0)
+
+        Thread(target=worker, daemon=True).start()
+
+    def render_series_seasons(self, series, info, container):
+        from kivy.uix.scrollview import ScrollView
+        from kivy.uix.gridlayout import GridLayout
+        from appcore.series import group_episodes_by_season
+
+        container.clear_widgets()
+
+        header = BoxLayout(
+            size_hint_y=None,
+            height=dp(48)
+        )
+        back = Button(
+            text="‹ VOLTAR ÀS SÉRIES",
+            size_hint_x=None,
+            width=dp(155)
+        )
+        back.bind(on_release=lambda *_: self.go_back())
+        header.add_widget(back)
+        header.add_widget(Label(text=series.name))
+        container.add_widget(header)
+
+        seasons = group_episodes_by_season(info)
+
+        if not seasons:
+            container.add_widget(Label(
+                text="Esta série não possui episódios disponíveis."
+            ))
+            return
+
+        scroll = ScrollView()
+        listing = GridLayout(
+            cols=1,
+            spacing=dp(5),
+            padding=dp(5),
+            size_hint_y=None
+        )
+        listing.bind(minimum_height=listing.setter("height"))
+
+        for season_number, name, season_episodes in seasons:
+            button = Button(
+                text=f"{name} ({len(season_episodes)} episódios)",
+                size_hint_y=None,
+                height=dp(58)
+            )
+            button.bind(
+                on_release=lambda _btn, number=season_number,
+                rows=season_episodes:
+                self.render_series_episodes(
+                    series, number, rows, container, info
+                )
+            )
+            listing.add_widget(button)
+
+        scroll.add_widget(listing)
+        container.add_widget(scroll)
+
+    def render_series_episodes(
+        self, series, season_number, episodes, container, info
+    ):
+        from kivy.uix.scrollview import ScrollView
+        from kivy.uix.gridlayout import GridLayout
+        from appcore.series import build_episode_items
+
+        self.navigation_stack.append(
+            lambda: self.render_series_seasons(
+                series, info, container
+            )
+        )
+
+        container.clear_widgets()
+
+        header = BoxLayout(
+            size_hint_y=None,
+            height=dp(48)
+        )
+        back = Button(
+            text="‹ TEMPORADAS",
+            size_hint_x=None,
+            width=dp(135)
+        )
+        back.bind(on_release=lambda *_: self.go_back())
+        header.add_widget(back)
+        header.add_widget(Label(
+            text=f"{series.name} - Temporada {season_number}"
+        ))
+        container.add_widget(header)
+
+        items = build_episode_items(
+            series, episodes, self.xtream_client
+        )
+
+        if not items:
+            container.add_widget(Label(
+                text="Nenhum episódio válido nesta temporada."
+            ))
+            return
+
+        scroll = ScrollView()
+        listing = GridLayout(
+            cols=1,
+            spacing=dp(5),
+            padding=dp(5),
+            size_hint_y=None
+        )
+        listing.bind(minimum_height=listing.setter("height"))
+
+        for item in items:
+            button = Button(
+                text=item.name,
+                size_hint_y=None,
+                height=dp(58),
                 halign="left"
             )
             button.bind(
@@ -389,7 +673,7 @@ class PythonTVApp(App):
                 content=Label(
                     text=(
                         "O player nativo só estará disponível "
-                        "na versão Android compilada.\\n\\n"
+                        "na versão Android compilada.\n\n"
                         + str(exc)
                     )
                 ),
@@ -414,9 +698,7 @@ class PythonTVApp(App):
 
     def on_key_down(self, _window, key, *_args):
         if key in (27, 8):
-            if self.root and self.root.current != "home":
-                self.root.current = "home"
-                return True
+            return self.go_back()
         return False
 
     def on_stop(self):

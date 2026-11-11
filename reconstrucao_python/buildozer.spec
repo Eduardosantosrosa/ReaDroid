@@ -4,6 +4,7 @@ package.name = independenttv
 package.domain = br.com.independenttv
 source.dir = .
 source.include_exts = py,kv,png,jpg,atlas,json,txt
+source.exclude_dirs = tests, .git, __pycache__, .pytest_cache, bin
 version = 0.1.0
 requirements = python3,kivy==2.3.1
 orientation = landscape
