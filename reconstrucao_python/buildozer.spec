@@ -9,7 +9,7 @@ requirements = python3,kivy==2.3.1
 orientation = landscape
 fullscreen = 1
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,WAKE_LOCK
-android.api = 35
+android.api = 36
 android.minapi = 24
 android.archs = arm64-v8a, armeabi-v7a
 android.accept_sdk_license = True
