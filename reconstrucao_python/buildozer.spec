@@ -14,6 +14,8 @@ android.minapi = 24
 android.archs = arm64-v8a, armeabi-v7a
 android.accept_sdk_license = True
 p4a.bootstrap = sdl2
+p4a.branch = develop
+p4a.commit = 0382d27
 
 
 android.add_src = android_src
